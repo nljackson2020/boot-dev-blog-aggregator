@@ -14,9 +14,9 @@ import (
 
 const creatUser = `-- name: CreatUser :one
 INSERT INTO users (
-  id, created_at, updated_at, name
-) VALUES ( $1, $2, $3, $4 )
-RETURNING id, created_at, updated_at, name
+  id, created_at, updated_at, name, apikey
+) VALUES ( $1, $2, $3, $4, encode(sha256(random()::text::bytea), 'hex'))
+RETURNING id, created_at, updated_at, name, apikey
 `
 
 type CreatUserParams struct {
@@ -39,6 +39,41 @@ func (q *Queries) CreatUser(ctx context.Context, arg CreatUserParams) (User, err
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Name,
+		&i.Apikey,
 	)
 	return i, err
+}
+
+const getUsers = `-- name: GetUsers :many
+SELECT id, created_at, updated_at, name, apikey FROM users
+WHERE apikey = $1
+`
+
+func (q *Queries) GetUsers(ctx context.Context, apikey string) ([]User, error) {
+	rows, err := q.db.QueryContext(ctx, getUsers, apikey)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []User
+	for rows.Next() {
+		var i User
+		if err := rows.Scan(
+			&i.ID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Name,
+			&i.Apikey,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

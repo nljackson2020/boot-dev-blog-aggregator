@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -41,4 +42,27 @@ func (cfg *apiConfig) handlerUserCreate(w http.ResponseWriter, r *http.Request) 
 	}
 
 	respondWithJSON(w, http.StatusCreated, user)
+}
+
+func (cfg *apiConfig) handlerUserGet(w http.ResponseWriter, r *http.Request) {
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		respondWithError(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	splitAuth := strings.Split(authHeader, " ")
+	if len(splitAuth) < 2 || splitAuth[0] != "ApiKey" {
+		respondWithError(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+	apiKey := splitAuth[1]
+
+	users, err := cfg.DB.GetUsers(r.Context(), apiKey)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to get users")
+		return
+	}
+
+	respondWithJSON(w, http.StatusOK, users)
 }
