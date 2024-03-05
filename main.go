@@ -1,7 +1,7 @@
 package main
 
 import (
-	//"database/sql"
+	"database/sql"
 	"log"
 	"net/http"
 	"os"
@@ -10,55 +10,63 @@ import (
 	"github.com/go-chi/cors"
 	"github.com/joho/godotenv"
 
-	//	"github.com/nljackson2020/boot-dev-blog-aggregator/internal/database"
+	"github.com/nljackson2020/boot-dev-blog-aggregator/internal/database"
 
 	_ "github.com/lib/pq"
 )
 
-// type apiConfig struct {
-// 	DB *database.Queries
-// }
+type apiConfig struct {
+	DB *database.Queries
+}
 
 func main() {
-	const filepathRoot = "."
 	godotenv.Load()
 
 	port := os.Getenv("PORT")
-	//dbURL := os.Getenv("DB_URL")
-
-	//db, err := sql.Open("postgres", dbURL)
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
-
-	//dbQueries := database.New(db)
-
-	r := chi.NewRouter()
-	cors := cors.New(cors.Options{
-		AllowedOrigins:   []string{"*"},
-		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
-		ExposedHeaders:   []string{"Link"},
-		AllowCredentials: true,
-		MaxAge:           300, // Maximum value not ignored by any of major browsers
-	})
-
-	r.Use(cors.Handler)
-
-	v1Router := chi.NewRouter()
-	v1Router.Get("/readiness", handlerReadiness)
-	v1Router.Get("/err", handlerError)
-	v1Router.Post("/users", handlerCreateUser)
-
-	r.Mount("/v1", v1Router)
-
-	corsMux := middlewareCors(r)
-	srv := &http.Server{
-		Addr:    ":" + port,
-		Handler: corsMux,
+	if port == "" {
+		log.Fatal("$PORT must be set")
 	}
 
-	log.Printf("Serving files from %s on port: %s\n", filepathRoot, port)
+	dbURL := os.Getenv("CONN")
+	if dbURL == "" {
+		log.Fatal("$CONN must be set")
+	}
+
+	db, err := sql.Open("postgres", dbURL)
+	if err != nil {
+		log.Fatal(err)
+	}
+	dbQueries := database.New(db)
+
+	config := &apiConfig{
+		DB: dbQueries,
+	}
+
+	router := chi.NewRouter()
+	router.Use(cors.Handler(cors.Options{
+		AllowedOrigins:   []string{"*"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"*"},
+		ExposedHeaders:   []string{"Link"},
+		AllowCredentials: false,
+		MaxAge:           300,
+	}))
+
+	v1Router := chi.NewRouter()
+
+	v1Router.Get("/readiness", handlerReadiness)
+	v1Router.Get("/err", handlerError)
+
+	v1Router.Post("/users", config.handlerUserCreate)
+
+	router.Mount("/v1", v1Router)
+
+	srv := &http.Server{
+		Addr:    ":" + port,
+		Handler: router,
+	}
+
+	log.Printf("Serving files on port: %s\n", port)
 	log.Fatal(srv.ListenAndServe())
 
 }
