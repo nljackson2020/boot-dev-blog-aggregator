@@ -56,8 +56,8 @@ func main() {
 
 	v1Router.Get("/readiness", handlerReadiness)
 	v1Router.Get("/err", handlerError)
-	v1Router.Get("/users", config.handlerUserGet)
 
+	v1Router.Get("/users", config.handlerUserGet)
 	v1Router.Post("/users", config.handlerUserCreate)
 
 	router.Mount("/v1", v1Router)

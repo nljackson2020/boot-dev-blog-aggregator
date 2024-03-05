@@ -3,19 +3,12 @@ package main
 import (
 	"encoding/json"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/nljackson2020/boot-dev-blog-aggregator/internal/auth"
 	"github.com/nljackson2020/boot-dev-blog-aggregator/internal/database"
 )
-
-type User struct {
-	ID         string `json:"id"`
-	Created_at string `json:"created_at"`
-	Updated_at string `json:"updated_at"`
-	Name       string `json:"name"`
-}
 
 func (cfg *apiConfig) handlerUserCreate(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
@@ -45,20 +38,13 @@ func (cfg *apiConfig) handlerUserCreate(w http.ResponseWriter, r *http.Request) 
 }
 
 func (cfg *apiConfig) handlerUserGet(w http.ResponseWriter, r *http.Request) {
-	authHeader := r.Header.Get("Authorization")
-	if authHeader == "" {
+	apiKey, err := auth.GetAPIKey(r.Header)
+	if err != nil {
 		respondWithError(w, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
-	splitAuth := strings.Split(authHeader, " ")
-	if len(splitAuth) < 2 || splitAuth[0] != "ApiKey" {
-		respondWithError(w, http.StatusUnauthorized, "Unauthorized")
-		return
-	}
-	apiKey := splitAuth[1]
-
-	users, err := cfg.DB.GetUsers(r.Context(), apiKey)
+	users, err := cfg.DB.GetUsersByAPIKey(r.Context(), apiKey)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failed to get users")
 		return
