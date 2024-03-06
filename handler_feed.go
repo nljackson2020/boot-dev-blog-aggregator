@@ -9,9 +9,10 @@ import (
 	"github.com/nljackson2020/boot-dev-blog-aggregator/internal/database"
 )
 
-func (cfg *apiConfig) handlerUserCreate(w http.ResponseWriter, r *http.Request) {
+func (cfg *apiConfig) handlerFeedCreate(w http.ResponseWriter, r *http.Request, user database.User) {
 	type parameters struct {
 		Name string `json:"name"`
+		Url  string `json:"url"`
 	}
 
 	decoder := json.NewDecoder(r.Body)
@@ -22,20 +23,18 @@ func (cfg *apiConfig) handlerUserCreate(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	user, err := cfg.DB.CreatUser(r.Context(), database.CreatUserParams{
+	feed, err := cfg.DB.CreateFeed(r.Context(), database.CreateFeedParams{
 		ID:        uuid.New(),
 		CreatedAt: time.Now().UTC(),
 		UpdatedAt: time.Now().UTC(),
 		Name:      params.Name,
+		Url:       params.Url,
+		UserID:    user.ID,
 	})
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Failed to create user")
+		respondWithError(w, http.StatusInternalServerError, "Failed to create feed")
 		return
 	}
 
-	respondWithJSON(w, http.StatusCreated, user)
-}
-
-func (cfg *apiConfig) handlerUserGet(w http.ResponseWriter, r *http.Request, user database.User) {
-	respondWithJSON(w, http.StatusOK, user)
+	respondWithJSON(w, http.StatusCreated, databaseFeedToFeed(feed))
 }

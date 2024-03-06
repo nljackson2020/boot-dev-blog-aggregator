@@ -9,10 +9,9 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
 	"github.com/joho/godotenv"
+	_ "github.com/lib/pq"
 
 	"github.com/nljackson2020/boot-dev-blog-aggregator/internal/database"
-
-	_ "github.com/lib/pq"
 )
 
 type apiConfig struct {
@@ -57,8 +56,10 @@ func main() {
 	v1Router.Get("/readiness", handlerReadiness)
 	v1Router.Get("/err", handlerError)
 
-	v1Router.Get("/users", config.handlerUserGet)
+	v1Router.Get("/users", config.middlewareAuth(config.handlerUserGet))
 	v1Router.Post("/users", config.handlerUserCreate)
+
+	v1Router.Post("/feeds", config.middlewareAuth(config.handlerFeedCreate))
 
 	router.Mount("/v1", v1Router)
 
@@ -69,5 +70,4 @@ func main() {
 
 	log.Printf("Serving files on port: %s\n", port)
 	log.Fatal(srv.ListenAndServe())
-
 }

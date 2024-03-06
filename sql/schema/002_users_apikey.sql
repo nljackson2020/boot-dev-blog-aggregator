@@ -1,8 +1,7 @@
 -- +goose Up
-ALTER TABLE users ADD COLUMN apikey VARCHAR(64) UNIQUE;
-UPDATE users SET apikey = (encode(sha256(random()::text::bytea), 'hex'));
-ALTER TABLE users ALTER COLUMN apikey SET NOT NULL;
+ALTER TABLE users ADD COLUMN apikey VARCHAR(64) UNIQUE NOT NULL DEFAULT (
+    encode(sha256(random()::text::bytea), 'hex')
+);
 
 -- +goose Down
-ALTER TABLE users DROP COLUMN apikey;
-```
+ALTER TABLE users DROP COLUMN api_key;

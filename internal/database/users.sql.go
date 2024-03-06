@@ -44,36 +44,20 @@ func (q *Queries) CreatUser(ctx context.Context, arg CreatUserParams) (User, err
 	return i, err
 }
 
-const getUsersByAPIKey = `-- name: GetUsersByAPIKey :many
+const getUserByAPIKey = `-- name: GetUserByAPIKey :one
 SELECT id, created_at, updated_at, name, apikey FROM users
 WHERE apikey = $1
 `
 
-func (q *Queries) GetUsersByAPIKey(ctx context.Context, apikey string) ([]User, error) {
-	rows, err := q.db.QueryContext(ctx, getUsersByAPIKey, apikey)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []User
-	for rows.Next() {
-		var i User
-		if err := rows.Scan(
-			&i.ID,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.Name,
-			&i.Apikey,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
+func (q *Queries) GetUserByAPIKey(ctx context.Context, apikey string) (User, error) {
+	row := q.db.QueryRowContext(ctx, getUserByAPIKey, apikey)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Name,
+		&i.Apikey,
+	)
+	return i, err
 }
