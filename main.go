@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
@@ -59,12 +60,12 @@ func main() {
 	v1Router.Get("/users", config.middlewareAuth(config.handlerUserGet))
 	v1Router.Post("/users", config.handlerUserCreate)
 
-	v1Router.Get("/feeds", config.handlerFeedGetAll)
+	v1Router.Get("/feeds", config.handlerGetFeeds)
 	v1Router.Post("/feeds", config.middlewareAuth(config.handlerFeedCreate))
 
-	v1Router.Get("/feed_follows", config.middlewareAuth(config.handlerGetFeed))
-	v1Router.Post("/feed_follows", config.middlewareAuth(config.handlerFeedFollows))
-	v1Router.Delete("/feed_follows/{feedFollowID}", config.middlewareAuth(config.handlerFeedFollowsDelete))
+	v1Router.Get("/feed_follows", config.middlewareAuth(config.handlerFeedFollowsGet))
+	v1Router.Post("/feed_follows", config.middlewareAuth(config.handlerFeedFollowCreate))
+	v1Router.Delete("/feed_follows/{feedFollowID}", config.middlewareAuth(config.handlerFeedFollowDelete))
 
 	router.Mount("/v1", v1Router)
 
@@ -73,6 +74,11 @@ func main() {
 		Handler: router,
 	}
 
+	const collectionConcurrency = 10
+	const collectionInterval = time.Minute
+	go startScraping(dbQueries, collectionConcurrency, collectionInterval)
+
 	log.Printf("Serving files on port: %s\n", port)
 	log.Fatal(srv.ListenAndServe())
+
 }

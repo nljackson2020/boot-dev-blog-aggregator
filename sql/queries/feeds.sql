@@ -3,18 +3,17 @@ INSERT INTO feeds (id, created_at, updated_at, name, url, user_id)
 VALUES ($1, $2, $3, $4, $5, $6)
 RETURNING *;
 
--- name: GetFeedsAll :many
+-- name: GetFeeds :many
 SELECT * FROM feeds;
 
--- name: CreateFeedFollow :many
-INSERT INTO feeds_follow (id, created_at, updated_at, feed_id, user_id)
-VALUES ($1, $2, $3, $4, $5)
+-- name: GetNextFeedsToFetch :many
+SELECT * FROM feeds
+ORDER BY last_fetched_at ASC NULLS FIRST
+LIMIT $1;
+
+-- name: MarkFeedFetched :one
+UPDATE feeds
+SET last_fetched_at = NOW(),
+updated_at = NOW()
+WHERE id = $1
 RETURNING *;
-
--- name: DeleteFeedFollow :exec
-DELETE FROM feeds_follow
-WHERE id = $1;
-
--- name: GetUserFeedAll :many
-SELECT * from feeds_follow
-WHERE user_id = $1;
